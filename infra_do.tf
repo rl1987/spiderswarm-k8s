@@ -31,3 +31,26 @@ resource "digitalocean_container_registry" "spsw" {
   subscription_tier_slug = "starter"
 }
 
+resource "digitalocean_container_registry_docker_credentials" "spsw" {
+  registry_name = "spsw"
+}
+
+provider "kubernetes" {
+  host             = digitalocean_kubernetes_cluster.spsw.endpoint
+  token            = digitalocean_kubernetes_cluster.spsw.kube_config[0].token
+  cluster_ca_certificate = base64decode(
+    digitalocean_kubernetes_cluster.spsw.kube_config[0].cluster_ca_certificate
+  )
+}
+
+resource "kubernetes_secret" "spsw" {
+  metadata {
+    name = "docker-cfg"
+  }
+
+  data = {
+    ".dockerconfigjson" = digitalocean_container_registry_docker_credentials.spsw.docker_credentials
+  }
+
+  type = "kubernetes.io/dockerconfigjson"
+}
